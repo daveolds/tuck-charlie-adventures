@@ -1,8 +1,8 @@
-# Tuck & Charlie Adventures
+# Tucker & Charlie Adventures
 
-A web-based jumper game honoring two very good dogs — **Tuck** and **Charlie**.
+A web-based side-scrolling jumper game honoring two very good dachshunds — **Tucker** and **Charlie**.
 
-Bounce from platform to platform, climb as high as you can, and chase a new high score.
+Run through the neighborhood, jump over obstacles, and survive as long as you can. Your score is the number of seconds you stay in the game.
 
 ## Play locally
 
@@ -14,24 +14,32 @@ python3 -m http.server 8080
 
 Then visit [http://localhost:8080](http://localhost:8080).
 
+## How to play
+
+1. Read the controls on the startup screen and click **Next**
+2. Choose **Tucker** (black) or **Charlie** (medium brown)
+3. Click **Start Adventure**
+
 ## Controls
 
 | Input | Action |
 |-------|--------|
 | ← → or A D | Move left / right |
-| Space | Jump boost (while on a platform) |
-| Touch (mobile) | Tap left or right half of screen |
+| Space | Jump |
+| ↑ or W | Super jump (high arc, float down) |
+
+Super jump has an 8-second cooldown. You start with 3 hearts — hitting an obstacle costs one life, flashes the screen red, and gives you 3 seconds of invincibility before you can lose another.
 
 ## Characters
 
-- **Tuck** — Steady jumper, reliable leaps
-- **Charlie** — Springy leaps, higher jump power
+- **Tucker** — Black dachshund
+- **Charlie** — Medium brown dachshund
 
-## Platform types
+Character stats (lives, speed, jump height, etc.) are configured separately and can be tuned per character in future updates.
 
-- **Green** — Standard platform
-- **Orange** — Spring platform (extra bounce)
-- **Blue** — Moving platform
+## Scoring
+
+Score equals whole seconds survived. Your best time is saved locally in the browser.
 
 ## Tech
 
@@ -39,4 +47,4 @@ Vanilla HTML, CSS, and JavaScript with Canvas rendering. No dependencies.
 
 ## License
 
-MIT — made with love for Tuck and Charlie.
+MIT — made with love for Tucker and Charlie.

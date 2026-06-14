@@ -9,6 +9,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 1rem;
   background: linear-gradient(160deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
   color: #f0f4ff;
@@ -17,6 +18,9 @@ body {
 
 #game-container {
   position: relative;
+  width: 100%;
+  max-width: 900px;
+  aspect-ratio: 16 / 9;
   border-radius: 16px;
   overflow: hidden;
   box-shadow:
@@ -26,8 +30,22 @@ body {
 
 #game-canvas {
   display: block;
+  width: 100%;
+  height: 100%;
   background: #87ceeb;
   touch-action: none;
+}
+
+.flash-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(220, 40, 40, 0.55);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.flash-overlay.hidden {
+  display: none;
 }
 
 .overlay {
@@ -42,32 +60,77 @@ body {
   background: rgba(15, 20, 40, 0.82);
   backdrop-filter: blur(6px);
   text-align: center;
+  z-index: 20;
 }
 
 .overlay.hidden {
   display: none;
 }
 
+.menu-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  max-width: 420px;
+}
+
+.menu-panel.hidden {
+  display: none;
+}
+
 .overlay h1 {
-  font-size: 1.6rem;
+  font-size: clamp(1.2rem, 3vw, 1.6rem);
   letter-spacing: 0.02em;
   line-height: 1.2;
 }
 
 .overlay h2 {
-  font-size: 1.4rem;
+  font-size: clamp(1.1rem, 2.5vw, 1.4rem);
 }
 
 .tagline {
   font-size: 0.95rem;
   opacity: 0.85;
-  max-width: 280px;
+  max-width: 320px;
+}
+
+.controls-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: 100%;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+}
+
+.control-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.9rem;
+}
+
+.control-keys {
+  font-weight: 700;
+  color: #ffd166;
+  white-space: nowrap;
+}
+
+.control-action {
+  opacity: 0.9;
 }
 
 .character-select {
   display: flex;
   gap: 1rem;
   margin: 0.5rem 0;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .char-btn {
@@ -106,14 +169,14 @@ body {
   font-size: 1.4rem;
 }
 
-.char-icon.tuck {
-  background: linear-gradient(135deg, #8b5a2b, #c49a6c);
-  color: #fff8f0;
+.char-icon.tucker {
+  background: linear-gradient(135deg, #1a1a1a, #444444);
+  color: #f0f0f0;
 }
 
 .char-icon.charlie {
-  background: linear-gradient(135deg, #4a4a4a, #9e9e9e);
-  color: #fff;
+  background: linear-gradient(135deg, #8b5a2b, #c49a6c);
+  color: #fff8f0;
 }
 
 .char-name {
@@ -126,22 +189,44 @@ body {
   opacity: 0.7;
 }
 
-.primary-btn {
+.menu-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.primary-btn,
+.secondary-btn {
   padding: 0.85rem 2rem;
   font-size: 1rem;
   font-weight: 700;
   border: none;
   border-radius: 999px;
-  background: linear-gradient(135deg, #ffd166, #f4a261);
-  color: #1a1a2e;
   cursor: pointer;
   transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.primary-btn {
+  background: linear-gradient(135deg, #ffd166, #f4a261);
+  color: #1a1a2e;
   box-shadow: 0 4px 16px rgba(244, 162, 97, 0.4);
 }
 
 .primary-btn:hover {
   transform: scale(1.04);
   box-shadow: 0 6px 20px rgba(244, 162, 97, 0.55);
+}
+
+.secondary-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f0f4ff;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+}
+
+.secondary-btn:hover {
+  transform: scale(1.04);
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .controls-hint {
@@ -156,19 +241,79 @@ body {
   right: 0;
   display: flex;
   justify-content: space-between;
-  padding: 0.75rem 1rem;
+  align-items: flex-start;
+  padding: 0.6rem 0.85rem;
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 1rem;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
   pointer-events: none;
+  z-index: 5;
 }
 
 .hud.hidden {
   display: none;
 }
 
+.hud-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.hud-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+}
+
+.hearts {
+  display: flex;
+  gap: 0.25rem;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.heart {
+  color: #ff6b6b;
+}
+
+.heart.empty {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.cooldown-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 100px;
+}
+
+.cooldown-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  opacity: 0.85;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cooldown-bar {
+  height: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.cooldown-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #ffd166, #f4a261);
+  border-radius: 999px;
+  transition: width 0.05s linear;
+}
+
 #high-score {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   opacity: 0.85;
 }
 
