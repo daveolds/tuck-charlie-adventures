@@ -145,7 +145,7 @@ body {
   color: inherit;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s, transform 0.15s;
-  min-width: 120px;
+  min-width: 160px;
 }
 
 .char-btn:hover {
@@ -158,35 +158,18 @@ body {
   background: rgba(255, 209, 102, 0.15);
 }
 
-.char-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 1.4rem;
-}
-
-.char-icon.tucker {
-  background: linear-gradient(135deg, #1a1a1a, #444444);
-  color: #f0f0f0;
-}
-
-.char-icon.charlie {
-  background: linear-gradient(135deg, #5c3218, #8b5a3c);
-  color: #fff8f0;
+.char-preview {
+  width: 140px;
+  height: 72px;
+  display: block;
+  pointer-events: none;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .char-name {
   font-weight: 700;
   font-size: 1rem;
-}
-
-.char-desc {
-  font-size: 0.75rem;
-  opacity: 0.7;
 }
 
 .menu-actions {
