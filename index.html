@@ -30,9 +30,13 @@
             <span class="control-keys">↑ or W</span>
             <span class="control-action">Super jump (float down)</span>
           </div>
+          <div class="control-row">
+            <span class="control-keys">Esc</span>
+            <span class="control-action">Pause / resume</span>
+          </div>
         </div>
 
-        <p class="controls-hint">Survive as long as you can — score is time in seconds!</p>
+        <p class="controls-hint">Survive as long as you can — grab glowing bones for +5 bonus points!</p>
         <button id="next-btn" class="primary-btn">Next</button>
       </div>
 
@@ -73,6 +77,24 @@
       </div>
     </div>
 
+    <div id="touch-controls" class="touch-controls" aria-label="Touch controls">
+      <button type="button" id="touch-left" class="touch-btn" aria-label="Move left">←</button>
+      <button type="button" id="touch-right" class="touch-btn" aria-label="Move right">→</button>
+      <button type="button" id="touch-jump" class="touch-btn" aria-label="Jump">Jump</button>
+      <button type="button" id="touch-super" class="touch-btn touch-btn-super" aria-label="Super jump">Super</button>
+    </div>
+
+    <div id="pause-menu" class="overlay hidden">
+      <div class="menu-panel">
+        <h2>Paused</h2>
+        <p class="controls-hint">Press Esc to resume</p>
+        <div class="menu-actions">
+          <button id="resume-btn" class="primary-btn">Resume</button>
+          <button id="exit-btn" class="secondary-btn">Exit</button>
+        </div>
+      </div>
+    </div>
+
     <div id="game-over" class="overlay hidden">
       <h2>Good boy energy!</h2>
       <p id="final-score">Time: 0s</p>
@@ -81,6 +103,7 @@
     </div>
   </div>
 
+  <script src="js/world.js"></script>
   <script src="js/game.js"></script>
 </body>
 </html>

@@ -3,7 +3,6 @@
 
   const canvas = document.getElementById("game-canvas");
   const ctx = canvas.getContext("2d");
-  const container = document.getElementById("game-container");
   const overlay = document.getElementById("overlay");
   const controlsPanel = document.getElementById("controls-panel");
   const selectPanel = document.getElementById("select-panel");
@@ -20,6 +19,14 @@
   const backBtn = document.getElementById("back-btn");
   const startBtn = document.getElementById("start-btn");
   const retryBtn = document.getElementById("retry-btn");
+  const pauseMenu = document.getElementById("pause-menu");
+  const resumeBtn = document.getElementById("resume-btn");
+  const exitBtn = document.getElementById("exit-btn");
+  const touchControls = document.getElementById("touch-controls");
+  const touchLeftBtn = document.getElementById("touch-left");
+  const touchRightBtn = document.getElementById("touch-right");
+  const touchJumpBtn = document.getElementById("touch-jump");
+  const touchSuperBtn = document.getElementById("touch-super");
   const charBtns = document.querySelectorAll(".char-btn");
 
   const BASE_W = 800;
@@ -29,6 +36,10 @@
   const MIN_SPAWN_MS = 800;
   const INVINCIBLE_MS = 3000;
   const BEST_TIME_KEY = "tuckerCharlieBestTime";
+  const BONE_SPAWN_MS = 4160;
+  const BONE_BONUS = 5;
+  const BONE_W = 44;
+  const BONE_H = 22;
 
   const CHARACTERS = {
     tucker: {
@@ -52,8 +63,8 @@
         ear: "#0e0e0e",
         nose: "#111111",
         eye: "#1a1a1a",
-        collar: "#E53E3E",
-        tag: "#ECC94B",
+        collar: "#1e3a8a",
+        tag: "#c0ccd6",
         grayFace: false,
         pawWhite: false,
       },
@@ -73,35 +84,16 @@
         bodyShade: "#2E1502",
         tan: "#D2B48C",
         tanLight: "#E8D4B8",
-        muzzle: "#E8E0CE",
-        muzzleGray: "#C0B8A6",
-        belly: "#5C2E0B",
+        muzzle: "#C4B5A3",
+        muzzleGray: "#B8A896",
+        belly: "#B8A896",
         ear: "#3A1C04",
         nose: "#111111",
         eye: "#2a1808",
-        collar: "#E53E3E",
-        tag: "#ECC94B",
+        collar: "#1e3a8a",
+        tag: "#c0ccd6",
         grayFace: true,
         pawWhite: true,
-      },
-    },
-  };
-
-  const OBSTACLE_TYPES = {
-    hydrant: {
-      width: 28,
-      height: 40,
-      draw(ctx, x, y, w, h) {
-        ctx.fillStyle = "#c0392b";
-        ctx.fillRect(x, y + h * 0.15, w, h * 0.85);
-        ctx.fillStyle = "#e74c3c";
-        ctx.beginPath();
-        ctx.arc(x + w / 2, y + h * 0.12, w * 0.55, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "#922b21";
-        ctx.fillRect(x + w * 0.15, y + h * 0.45, w * 0.7, h * 0.08);
-        ctx.fillRect(x - w * 0.15, y + h * 0.55, w * 0.35, h * 0.06);
-        ctx.fillRect(x + w * 0.8, y + h * 0.55, w * 0.35, h * 0.06);
       },
     },
   };
@@ -109,12 +101,18 @@
   let W = BASE_W;
   let H = BASE_H;
   let groundY = H * 0.85;
+  let displayScale = 1;
+  let displayOffsetX = 0;
+  let displayOffsetY = 0;
+  let devicePixelRatio = 1;
 
   let selectedChar = "tucker";
   let running = false;
+  let paused = false;
   let lives = 3;
   let elapsedMs = 0;
   let scoreSeconds = 0;
+  let bonusPoints = 0;
   let bestTime = Number(localStorage.getItem(BEST_TIME_KEY) || 0);
   let invincibleUntil = 0;
   let superJumpReadyAt = 0;
@@ -129,6 +127,9 @@
   const jumpPressed = { jump: false, superJump: false };
 
   let obstacles = [];
+  let bones = [];
+  let boneSpawnTimerMs = 0;
+  let scorePopups = [];
 
   const player = {
     x: 120,
@@ -141,16 +142,52 @@
   };
 
   function resizeCanvas() {
-    const rect = container.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    W = Math.max(320, Math.round(rect.width));
-    H = Math.max(180, Math.round(rect.height));
-    canvas.width = W * dpr;
-    canvas.height = H * dpr;
-    canvas.style.width = `${W}px`;
-    canvas.style.height = `${H}px`;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+    devicePixelRatio = window.devicePixelRatio || 1;
+
+    const controlsReserve = touchControls.classList.contains("visible")
+      ? touchControls.offsetHeight
+      : 0;
+    const availableH = Math.max(120, viewportH - controlsReserve);
+
+    displayScale = Math.min(viewportW / BASE_W, availableH / BASE_H);
+    const drawW = BASE_W * displayScale;
+    const drawH = BASE_H * displayScale;
+    displayOffsetX = (viewportW - drawW) / 2;
+    displayOffsetY = (availableH - drawH) / 2;
+
+    canvas.width = Math.max(1, Math.round(viewportW * devicePixelRatio));
+    canvas.height = Math.max(1, Math.round(viewportH * devicePixelRatio));
+    canvas.style.width = `${viewportW}px`;
+    canvas.style.height = `${viewportH}px`;
+
+    W = BASE_W;
+    H = BASE_H;
     groundY = H * 0.85;
+
+    if (!running) {
+      player.y = groundY - player.height;
+    }
+  }
+
+  function setTouchControlsVisible(visible) {
+    touchControls.classList.toggle("visible", visible);
+    resizeCanvas();
+  }
+
+  function beginFrame() {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "#0f1418";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(
+      displayScale * devicePixelRatio,
+      0,
+      0,
+      displayScale * devicePixelRatio,
+      displayOffsetX * devicePixelRatio,
+      displayOffsetY * devicePixelRatio
+    );
   }
 
   function showPanel(panel) {
@@ -172,6 +209,7 @@
     lives = stats.lives;
     elapsedMs = 0;
     scoreSeconds = 0;
+    bonusPoints = 0;
     invincibleUntil = 0;
     superJumpReadyAt = 0;
     isSuperJumping = false;
@@ -181,6 +219,9 @@
     flashUntil = 0;
     parallaxOffset = 0;
     obstacles = [];
+    bones = [];
+    boneSpawnTimerMs = 0;
+    scorePopups = [];
 
     player.x = W * 0.15;
     player.y = groundY - player.height;
@@ -194,23 +235,29 @@
   function startGame() {
     stopSelectPreviewLoop();
     resetGame();
+    paused = false;
+    pauseMenu.classList.add("hidden");
     overlay.classList.add("hidden");
     gameOverEl.classList.add("hidden");
     hud.classList.remove("hidden");
+    setTouchControlsVisible(true);
     running = true;
     requestAnimationFrame(gameLoop);
   }
 
   function endGame() {
     running = false;
+    paused = false;
+    pauseMenu.classList.add("hidden");
     const isNewRecord = scoreSeconds > bestTime;
     if (isNewRecord) {
       bestTime = scoreSeconds;
       localStorage.setItem(BEST_TIME_KEY, String(bestTime));
     }
-    finalScoreEl.textContent = `Time: ${scoreSeconds}s`;
+    finalScoreEl.textContent = `Time: ${scoreSeconds}s · Bones: +${bonusPoints}`;
     newRecordEl.classList.toggle("hidden", !isNewRecord);
     hud.classList.add("hidden");
+    setTouchControlsVisible(false);
     gameOverEl.classList.remove("hidden");
   }
 
@@ -223,7 +270,7 @@
       heart.textContent = "♥";
       heartsEl.appendChild(heart);
     }
-    scoreEl.textContent = `${scoreSeconds}s`;
+    scoreEl.textContent = bonusPoints > 0 ? `${scoreSeconds}s (+${bonusPoints})` : `${scoreSeconds}s`;
     highScoreEl.textContent = `Best: ${bestTime}s`;
 
     const now = Date.now();
@@ -254,8 +301,8 @@
   }
 
   function makeObstacle() {
-    const typeKey = "hydrant";
-    const def = OBSTACLE_TYPES[typeKey];
+    const typeKey = World.pickRandomObstacleType();
+    const def = World.OBSTACLE_TYPES[typeKey];
     return {
       type: typeKey,
       x: W + 20,
@@ -267,6 +314,68 @@
 
   function spawnObstacle() {
     obstacles.push(makeObstacle());
+  }
+
+  function makeBone() {
+    const elevated = Math.random() < 0.38;
+    const centerY = elevated
+      ? groundY - 200 - Math.random() * 35
+      : groundY - 90 - Math.random() * 30;
+    return {
+      x: W + 30,
+      y: centerY - BONE_H / 2,
+      width: BONE_W,
+      height: BONE_H,
+      elevated,
+      phase: Math.random() * Math.PI * 2,
+    };
+  }
+
+  function spawnBone() {
+    bones.push(makeBone());
+  }
+
+  function updateBones(dt) {
+    for (const bone of bones) {
+      bone.x -= SCROLL_SPEED;
+    }
+    bones = bones.filter((bone) => bone.x + bone.width > -30);
+
+    boneSpawnTimerMs += dt;
+    if (boneSpawnTimerMs >= BONE_SPAWN_MS) {
+      spawnBone();
+      boneSpawnTimerMs = 0;
+    }
+  }
+
+  function collectBone(bone) {
+    bonusPoints += BONE_BONUS;
+    scorePopups.push({
+      text: "+5",
+      x: bone.x + bone.width / 2,
+      y: bone.y,
+      life: 900,
+      duration: 900,
+    });
+    updateHud();
+  }
+
+  function checkBoneCollisions() {
+    const hitbox = getPlayerHitbox();
+    bones = bones.filter((bone) => {
+      if (rectsOverlap(hitbox, bone)) {
+        collectBone(bone);
+        return false;
+      }
+      return true;
+    });
+  }
+
+  function updateScorePopups(dt) {
+    for (const popup of scorePopups) {
+      popup.life -= dt;
+    }
+    scorePopups = scorePopups.filter((popup) => popup.life > 0);
   }
 
   function updateDifficulty() {
@@ -384,70 +493,40 @@
     }
   }
 
+  function pauseGame() {
+    if (!running || paused) return;
+    paused = true;
+    pauseMenu.classList.remove("hidden");
+    setTouchControlsVisible(false);
+  }
+
+  function resumeGame() {
+    if (!running || !paused) return;
+    paused = false;
+    pauseMenu.classList.add("hidden");
+    setTouchControlsVisible(true);
+    lastFrameTime = 0;
+  }
+
+  function exitToMenu() {
+    running = false;
+    paused = false;
+    pauseMenu.classList.add("hidden");
+    hud.classList.add("hidden");
+    setTouchControlsVisible(false);
+    overlay.classList.remove("hidden");
+    showPanel("select");
+  }
+
   function drawBackground() {
-    parallaxOffset += SCROLL_SPEED * 0.3;
-
-    const sky = ctx.createLinearGradient(0, 0, 0, H);
-    sky.addColorStop(0, "#7ec8e3");
-    sky.addColorStop(0.55, "#a8d8ea");
-    sky.addColorStop(1, "#d4ecf7");
-    ctx.fillStyle = sky;
-    ctx.fillRect(0, 0, W, H);
-
-    ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
-    const cloudSpacing = 200;
-    for (let i = -1; i < 6; i++) {
-      const cx = ((i * cloudSpacing - parallaxOffset * 0.2) % (W + cloudSpacing) + W + cloudSpacing) % (W + cloudSpacing) - 50;
-      const cy = 40 + (i % 3) * 25;
-      ctx.beginPath();
-      ctx.arc(cx, cy, 22, 0, Math.PI * 2);
-      ctx.arc(cx + 18, cy - 8, 16, 0, Math.PI * 2);
-      ctx.arc(cx + 36, cy, 20, 0, Math.PI * 2);
-      ctx.fill();
+    if (!paused) {
+      parallaxOffset += SCROLL_SPEED * 0.3;
     }
-
-    const houseSpacing = 180;
-    for (let i = -1; i < 8; i++) {
-      const hx = ((i * houseSpacing - parallaxOffset * 0.5) % (W + houseSpacing) + W + houseSpacing) % (W + houseSpacing) - 60;
-      const hy = groundY - 90 - (i % 3) * 15;
-      const hw = 70 + (i % 2) * 20;
-      const hh = 60 + (i % 3) * 10;
-
-      ctx.fillStyle = i % 2 === 0 ? "#b8c5d6" : "#a8b8cc";
-      ctx.fillRect(hx, hy, hw, hh);
-      ctx.fillStyle = i % 2 === 0 ? "#8a9bb0" : "#7a8da4";
-      ctx.beginPath();
-      ctx.moveTo(hx - 8, hy);
-      ctx.lineTo(hx + hw / 2, hy - 35);
-      ctx.lineTo(hx + hw + 8, hy);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.fillStyle = "#ffd166";
-      ctx.fillRect(hx + hw * 0.35, hy + hh * 0.35, hw * 0.2, hh * 0.25);
-    }
-
-    ctx.fillStyle = "#6b7b8c";
-    ctx.fillRect(0, groundY - 8, W, 8);
-
-    ctx.fillStyle = "#c4b5a0";
-    ctx.fillRect(0, groundY, W, H - groundY);
-
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
-    ctx.lineWidth = 1;
-    for (let sx = -((parallaxOffset * 0.8) % 60); sx < W; sx += 60) {
-      ctx.beginPath();
-      ctx.moveTo(sx, groundY + 12);
-      ctx.lineTo(sx + 30, groundY + 12);
-      ctx.stroke();
-    }
+    World.drawBackground(ctx, W, H, groundY, parallaxOffset, animTime);
   }
 
   function drawObstacle(obs) {
-    const def = OBSTACLE_TYPES[obs.type];
-    if (def && def.draw) {
-      def.draw(ctx, obs.x, obs.y, obs.width, obs.height);
-    }
+    World.drawObstacle(ctx, obs);
   }
 
   // ── DOG DRAWING ────────────────────────────────────────────────────────────
@@ -460,7 +539,7 @@
     const sx = w / 60;
     const sy = h / 40;
     const tan = ap.tan || ap.muzzle;
-    const pawColor = ap.pawWhite ? "#F0ECE6" : tan;
+    const pawColor = ap.pawWhite ? (ap.muzzleGray || "#F0ECE6") : tan;
 
     function legBob(phase) {
       if (!walking) return 0;
@@ -534,18 +613,35 @@
     drawCtx.fillStyle = ap.collar;
     drawCtx.fillRect(w - 12 * sx, 11 * sy, 4 * sx, 12 * sy);
 
-    // Gold tag
-    const goldGrad = drawCtx.createRadialGradient(
+    // Silver ID tag
+    const tagGrad = drawCtx.createRadialGradient(
       w - 10 * sx, 24 * sy, 1,
       w - 10 * sx, 24 * sy, 3 * sx
     );
-    goldGrad.addColorStop(0, "#FFFDF0");
-    goldGrad.addColorStop(0.5, ap.tag);
-    goldGrad.addColorStop(1, "#B7791F");
-    drawCtx.fillStyle = goldGrad;
+    tagGrad.addColorStop(0, "#f5f7fa");
+    tagGrad.addColorStop(0.45, ap.tag);
+    tagGrad.addColorStop(1, "#7a8794");
+    drawCtx.fillStyle = tagGrad;
     drawCtx.beginPath();
     drawCtx.arc(w - 10 * sx, 24 * sy, 3 * sx, 0, Math.PI * 2);
     drawCtx.fill();
+
+    // Droopy ear (behind head)
+    const earGrad = drawCtx.createLinearGradient(
+      w - 12 * sx, 3 * sy,
+      w - 12 * sx, 17 * sy
+    );
+    earGrad.addColorStop(0, ap.ear);
+    earGrad.addColorStop(1, ap.bodyShade);
+    drawCtx.fillStyle = earGrad;
+    drawCtx.beginPath();
+    drawCtx.ellipse(w - 11 * sx, 8 * sy, 4.5 * sx, 9 * sy, -0.1, 0, Math.PI * 2);
+    drawCtx.fill();
+    drawCtx.strokeStyle = ap.bodyShade;
+    drawCtx.lineWidth = 1;
+    drawCtx.beginPath();
+    drawCtx.ellipse(w - 11 * sx, 8 * sy, 2 * sx, 7 * sy, -0.1, 0, Math.PI * 2);
+    drawCtx.stroke();
 
     // Head
     const headGrad = drawCtx.createRadialGradient(
@@ -575,45 +671,28 @@
     if (tan && !ap.grayFace) {
       drawCtx.fillStyle = tan;
       drawCtx.beginPath();
-      drawCtx.arc(w - 9 * sx, 5 * sy, 1.5 * sx, 0, Math.PI * 2);
+      drawCtx.arc(w - 5 * sx, 5 * sy, 1.5 * sx, 0, Math.PI * 2);
       drawCtx.fill();
     }
-
-    // Droopy ear
-    const earGrad = drawCtx.createLinearGradient(
-      w - 12 * sx, 3 * sy,
-      w - 12 * sx, 17 * sy
-    );
-    earGrad.addColorStop(0, ap.ear);
-    earGrad.addColorStop(1, ap.bodyShade);
-    drawCtx.fillStyle = earGrad;
-    drawCtx.beginPath();
-    drawCtx.ellipse(w - 11 * sx, 8 * sy, 4.5 * sx, 9 * sy, -0.1, 0, Math.PI * 2);
-    drawCtx.fill();
-    drawCtx.strokeStyle = ap.bodyShade;
-    drawCtx.lineWidth = 1;
-    drawCtx.beginPath();
-    drawCtx.ellipse(w - 11 * sx, 8 * sy, 2 * sx, 7 * sy, -0.1, 0, Math.PI * 2);
-    drawCtx.stroke();
 
     // Snout
     drawCtx.fillStyle = ap.grayFace ? ap.muzzle : tan;
     drawCtx.beginPath();
     drawCtx.ellipse(w + 3 * sx, 11 * sy, 4 * sx, 3 * sy, 0.1, 0, Math.PI * 2);
     drawCtx.fill();
-    drawCtx.fillStyle = ap.bodyShade;
+    drawCtx.fillStyle = ap.grayFace ? "rgba(74, 35, 6, 0.12)" : ap.bodyShade;
     drawCtx.beginPath();
     drawCtx.ellipse(w + 1 * sx, 9 * sy, 3 * sx, 1.5 * sy, 0.1, 0, Math.PI * 2);
     drawCtx.fill();
 
-    // Eye
+    // Eye (on face, forward of ear)
     drawCtx.fillStyle = ap.eye;
     drawCtx.beginPath();
-    drawCtx.arc(w - 7 * sx, 8 * sy, 2 * sx, 0, Math.PI * 2);
+    drawCtx.arc(w - 3.5 * sx, 9 * sy, 2 * sx, 0, Math.PI * 2);
     drawCtx.fill();
     drawCtx.fillStyle = "white";
     drawCtx.beginPath();
-    drawCtx.arc(w - 8 * sx, 7 * sy, 0.6 * sx, 0, Math.PI * 2);
+    drawCtx.arc(w - 2.5 * sx, 8 * sy, 0.6 * sx, 0, Math.PI * 2);
     drawCtx.fill();
 
     // Nose
@@ -702,25 +781,32 @@
   function gameLoop(timestamp) {
     if (!running) return;
 
-    const dt = lastFrameTime ? timestamp - lastFrameTime : 16;
-    lastFrameTime = timestamp;
-    animTime += dt;
+    if (!paused) {
+      const dt = lastFrameTime ? timestamp - lastFrameTime : 16;
+      lastFrameTime = timestamp;
+      animTime += dt;
 
-    updatePlayer();
-    updateObstacles(dt);
-    checkCollisions();
-    updateFlash();
+      updatePlayer();
+      updateObstacles(dt);
+      updateBones(dt);
+      checkCollisions();
+      checkBoneCollisions();
+      updateScorePopups(dt);
+      updateFlash();
 
-    elapsedMs += dt;
-    const newScore = Math.floor(elapsedMs / 1000);
-    if (newScore !== scoreSeconds) {
-      scoreSeconds = newScore;
-      updateDifficulty();
+      elapsedMs += dt;
+      const newScore = Math.floor(elapsedMs / 1000);
+      if (newScore !== scoreSeconds) {
+        scoreSeconds = newScore;
+        updateDifficulty();
+      }
+      updateHud();
     }
-    updateHud();
 
+    beginFrame();
     drawBackground();
     for (const obs of obstacles) drawObstacle(obs);
+    for (const bone of bones) World.drawBone(ctx, bone, animTime);
 
     const moving = Math.abs(player.vx) > 0.5;
     const invincible = Date.now() < invincibleUntil;
@@ -729,12 +815,16 @@
       drawDog(player.x, player.y, selectedChar, moving, player.vy);
     }
 
+    for (const popup of scorePopups) World.drawScorePopup(ctx, popup);
+
     requestAnimationFrame(gameLoop);
   }
 
   nextBtn.addEventListener("click", () => showPanel("select"));
   backBtn.addEventListener("click", () => showPanel("controls"));
   startBtn.addEventListener("click", startGame);
+  resumeBtn.addEventListener("click", resumeGame);
+  exitBtn.addEventListener("click", exitToMenu);
 
   retryBtn.addEventListener("click", () => {
     gameOverEl.classList.add("hidden");
@@ -754,6 +844,16 @@
   });
 
   window.addEventListener("keydown", (e) => {
+    if (e.code === "Escape") {
+      if (running) {
+        if (paused) resumeGame();
+        else pauseGame();
+      }
+      e.preventDefault();
+      return;
+    }
+    if (paused) return;
+
     if (e.code === "ArrowLeft" || e.code === "KeyA") keys.left = true;
     if (e.code === "ArrowRight" || e.code === "KeyD") keys.right = true;
     if (e.code === "Space") {
@@ -767,22 +867,59 @@
   });
 
   window.addEventListener("keyup", (e) => {
+    if (e.code === "Escape") return;
+    if (paused) return;
+
     if (e.code === "ArrowLeft" || e.code === "KeyA") keys.left = false;
     if (e.code === "ArrowRight" || e.code === "KeyD") keys.right = false;
     if (e.code === "Space") keys.jump = false;
     if (e.code === "ArrowUp" || e.code === "KeyW") keys.superJump = false;
   });
 
-  window.addEventListener("resize", () => {
-    const oldGround = groundY;
-    resizeCanvas();
-    if (!running) {
-      player.y = groundY - player.height;
-    } else {
-      const ratio = groundY / oldGround;
-      player.y *= ratio;
-    }
+  function bindTouchButton(button, keyName) {
+    const press = (e) => {
+      if (!running || paused) return;
+      e.preventDefault();
+      keys[keyName] = true;
+      button.classList.add("pressed");
+    };
+    const release = (e) => {
+      e.preventDefault();
+      keys[keyName] = false;
+      button.classList.remove("pressed");
+    };
+
+    button.addEventListener("touchstart", press, { passive: false });
+    button.addEventListener("touchend", release, { passive: false });
+    button.addEventListener("touchcancel", release, { passive: false });
+    button.addEventListener("mousedown", press);
+    button.addEventListener("mouseup", release);
+    button.addEventListener("mouseleave", release);
+  }
+
+  bindTouchButton(touchLeftBtn, "left");
+  bindTouchButton(touchRightBtn, "right");
+  bindTouchButton(touchJumpBtn, "jump");
+  bindTouchButton(touchSuperBtn, "superJump");
+
+  window.addEventListener("blur", () => {
+    keys.left = false;
+    keys.right = false;
+    keys.jump = false;
+    keys.superJump = false;
+    jumpPressed.jump = false;
+    jumpPressed.superJump = false;
+    [touchLeftBtn, touchRightBtn, touchJumpBtn, touchSuperBtn].forEach((btn) => {
+      btn.classList.remove("pressed");
+    });
   });
+
+  window.addEventListener("resize", resizeCanvas);
+  window.addEventListener("orientationchange", resizeCanvas);
+
+  canvas.addEventListener("touchstart", (e) => {
+    if (running && !paused) e.preventDefault();
+  }, { passive: false });
 
   resizeCanvas();
   showPanel("controls");
