@@ -7,3 +7,5 @@ Thumbs.db
 node_modules/
 .visual-screenshots/
 .visual-screenshots-before/
+__pycache__/
+*.pyc
