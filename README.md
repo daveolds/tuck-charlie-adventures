@@ -8,21 +8,9 @@ Run through the neighborhood, jump over obstacles, and survive as long as you ca
 
 ## Play online
 
-**[Play Tucker & Charlie Adventures](https://play.tuckerandcharlie.com)**
-
-Also available at [daveolds.github.io/tuck-charlie-adventures](https://daveolds.github.io/tuck-charlie-adventures/).
+**[Play Tucker & Charlie Adventures](https://daveolds.github.io/tuck-charlie-adventures/)**
 
 Pushes to `main` deploy automatically via GitHub Actions.
-
-### Custom domain DNS
-
-At your DNS provider for `tuckerandcharlie.com`, add:
-
-| Type | Name | Value |
-|------|------|-------|
-| CNAME | `play` | `daveolds.github.io` |
-
-After DNS propagates, GitHub provisions HTTPS automatically (may take up to 24 hours).
 
 ## Play locally
 
