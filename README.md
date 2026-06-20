@@ -1,8 +1,28 @@
 # Tucker & Charlie Adventures
 
+[![Deploy to GitHub Pages](https://github.com/daveolds/tuck-charlie-adventures/actions/workflows/deploy.yml/badge.svg)](https://github.com/daveolds/tuck-charlie-adventures/actions/workflows/deploy.yml)
+
 A web-based side-scrolling jumper game honoring two very good dachshunds — **Tucker** and **Charlie**.
 
 Run through the neighborhood, jump over obstacles, and survive as long as you can. Your score is the number of seconds you stay in the game.
+
+## Play online
+
+**[Play Tucker & Charlie Adventures](https://daveolds.github.io/tuck-charlie-adventures/)**
+
+Pushes to `main` deploy automatically via GitHub Actions.
+
+### Custom domain
+
+To use your own domain (e.g. `play.yourdomain.com`):
+
+1. In the repo, go to **Settings → Pages → Custom domain** and enter your domain.
+2. At your DNS provider, add a **CNAME** record:
+   - **Name:** `play` (or your subdomain)
+   - **Value:** `daveolds.github.io`
+3. Wait for DNS to propagate, then enable **Enforce HTTPS** in GitHub Pages settings.
+
+For an apex/root domain, use GitHub’s four **A** records instead of CNAME — see [GitHub Pages custom domain docs](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site).
 
 ## Play locally
 
