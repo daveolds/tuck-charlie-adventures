@@ -1,0 +1,18 @@
+---
+description: Require automatic visual render and validation for all UI/visual changes
+alwaysApply: true
+---
+
+# Visual changes — agent validates, not the user
+
+When the user asks for any visual change (layout, colors, sprites, canvas art, CSS, menus, HUD, sizing, positioning):
+
+1. **Read and follow** the `visual-validate` skill (`.cursor/skills/visual-validate/SKILL.md`)
+2. **Capture proof** with `bash scripts/visual-capture/run.sh` after implementing
+3. **Inspect PNGs** yourself using the Read tool — do not ask the user to look
+4. **Fix and re-capture** until acceptance criteria pass (up to 3 iterations)
+5. **Report** a Visual validation section with pass/fail per criterion and screenshot paths
+
+Never respond with "please run the game and let me know" or "does this look right?" for visual work.
+
+If capture fails after install attempts, fix the tooling first — do not punt validation to the user.

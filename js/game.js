@@ -657,21 +657,39 @@
     drawCtx.arc(w - 10 * sx, 24 * sy, 3 * sx, 0, Math.PI * 2);
     drawCtx.fill();
 
-    // Droopy ear (behind head)
+    // Droopy ear (behind head) — long pendulous flap, not upright bear ears
+    const earTopX = w - 13 * sx;
+    const earTopY = 3.5 * sy;
     const earGrad = drawCtx.createLinearGradient(
-      w - 12 * sx, 3 * sy,
-      w - 12 * sx, 17 * sy
+      earTopX, earTopY,
+      earTopX - 2 * sx, earTopY + 16 * sy
     );
     earGrad.addColorStop(0, ap.ear);
+    earGrad.addColorStop(0.55, ap.ear);
     earGrad.addColorStop(1, ap.bodyShade);
     drawCtx.fillStyle = earGrad;
     drawCtx.beginPath();
-    drawCtx.ellipse(w - 11 * sx, 8 * sy, 4.5 * sx, 9 * sy, -0.1, 0, Math.PI * 2);
+    drawCtx.moveTo(earTopX + 1.5 * sx, earTopY);
+    drawCtx.bezierCurveTo(
+      earTopX - 7 * sx, earTopY + 4 * sy,
+      earTopX - 6.5 * sx, earTopY + 13 * sy,
+      earTopX - 2 * sx, earTopY + 18 * sy
+    );
+    drawCtx.bezierCurveTo(
+      earTopX + 1 * sx, earTopY + 15 * sy,
+      earTopX + 4 * sx, earTopY + 7 * sy,
+      earTopX + 2 * sx, earTopY + 1 * sy
+    );
+    drawCtx.closePath();
     drawCtx.fill();
     drawCtx.strokeStyle = ap.bodyShade;
-    drawCtx.lineWidth = 1;
+    drawCtx.lineWidth = 0.9;
     drawCtx.beginPath();
-    drawCtx.ellipse(w - 11 * sx, 8 * sy, 2 * sx, 7 * sy, -0.1, 0, Math.PI * 2);
+    drawCtx.moveTo(earTopX + 0.5 * sx, earTopY + 1.5 * sy);
+    drawCtx.quadraticCurveTo(
+      earTopX - 2.5 * sx, earTopY + 9 * sy,
+      earTopX - 1.5 * sx, earTopY + 16 * sy
+    );
     drawCtx.stroke();
 
     // Head

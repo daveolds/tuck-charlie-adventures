@@ -1,0 +1,12 @@
+{
+  "name": "tuck-charlie-adventures",
+  "private": true,
+  "description": "Dev tooling for Tucker & Charlie Adventures",
+  "scripts": {
+    "visual:capture": "bash scripts/visual-capture/run.sh",
+    "visual:validate": "bash scripts/visual-capture/run.sh --validate"
+  },
+  "devDependencies": {
+    "playwright": "^1.52.0"
+  }
+}

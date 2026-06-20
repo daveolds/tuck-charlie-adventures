@@ -4,3 +4,6 @@ Thumbs.db
 .idea/
 .vscode/
 .tools/
+node_modules/
+.visual-screenshots/
+.visual-screenshots-before/
