@@ -3,6 +3,10 @@
 
   const canvas = document.getElementById("game-canvas");
   const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = true;
+  if (ctx.imageSmoothingQuality) {
+    ctx.imageSmoothingQuality = "high";
+  }
   const overlay = document.getElementById("overlay");
   const controlsPanel = document.getElementById("controls-panel");
   const selectPanel = document.getElementById("select-panel");
@@ -31,7 +35,11 @@
 
   const BASE_W = 800;
   const BASE_H = 450;
-  const SCROLL_SPEED = 4;
+  const GAME_SPEED = 1.2;
+  const SCROLL_SPEED = 4 * GAME_SPEED;
+  const STEP_MS = 1000 / 60;
+  const MAX_FRAME_MS = 100;
+  const MAX_SIM_STEPS = 5;
   const INITIAL_SPAWN_MS = 2500;
   const MIN_SPAWN_MS = 800;
   const INVINCIBLE_MS = 3000;
@@ -45,11 +53,11 @@
     tucker: {
       name: "Tucker",
       lives: 3,
-      moveSpeed: 5,
-      jumpPower: -13,
-      superJumpPower: -20,
-      gravity: 0.55,
-      floatGravity: 0.15,
+      moveSpeed: 6,
+      jumpPower: -16,
+      superJumpPower: -24,
+      gravity: 0.66,
+      floatGravity: 0.18,
       superJumpCooldown: 8000,
       appearance: {
         body: "#1a1a1a",
@@ -72,11 +80,11 @@
     charlie: {
       name: "Charlie",
       lives: 3,
-      moveSpeed: 5,
-      jumpPower: -13,
-      superJumpPower: -20,
-      gravity: 0.55,
-      floatGravity: 0.15,
+      moveSpeed: 6,
+      jumpPower: -16,
+      superJumpPower: -24,
+      gravity: 0.66,
+      floatGravity: 0.18,
       superJumpCooldown: 8000,
       appearance: {
         body: "#4A2306",
@@ -122,6 +130,7 @@
   let animTime = 0;
   let flashUntil = 0;
   let parallaxOffset = 0;
+  let simAccumulator = 0;
 
   const keys = { left: false, right: false, jump: false, superJump: false };
   const jumpPressed = { jump: false, superJump: false };
@@ -218,6 +227,7 @@
     animTime = 0;
     flashUntil = 0;
     parallaxOffset = 0;
+    simAccumulator = 0;
     obstacles = [];
     bones = [];
     boneSpawnTimerMs = 0;
@@ -242,6 +252,8 @@
     hud.classList.remove("hidden");
     setTouchControlsVisible(true);
     running = true;
+    lastFrameTime = 0;
+    simAccumulator = 0;
     requestAnimationFrame(gameLoop);
   }
 
@@ -506,6 +518,7 @@
     pauseMenu.classList.add("hidden");
     setTouchControlsVisible(true);
     lastFrameTime = 0;
+    simAccumulator = 0;
   }
 
   function exitToMenu() {
@@ -518,15 +531,16 @@
     showPanel("select");
   }
 
-  function drawBackground() {
-    if (!paused) {
-      parallaxOffset += SCROLL_SPEED * 0.3;
-    }
-    World.drawBackground(ctx, W, H, groundY, parallaxOffset, animTime);
+  function drawBackground(renderParallax) {
+    World.drawBackground(ctx, W, H, groundY, renderParallax, animTime);
   }
 
-  function drawObstacle(obs) {
-    World.drawObstacle(ctx, obs);
+  function drawObstacle(obs, renderX) {
+    if (renderX === undefined) {
+      World.drawObstacle(ctx, obs);
+      return;
+    }
+    World.drawObstacle(ctx, { ...obs, x: renderX });
   }
 
   // ── DOG DRAWING ────────────────────────────────────────────────────────────
@@ -556,14 +570,29 @@
       drawCtx.fill();
     }
 
+    function paintShadow(centerX, baseY, scale, alpha) {
+      drawCtx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
+      drawCtx.beginPath();
+      drawCtx.ellipse(centerX, baseY, (w / 2.2) * scale, 5 * sy * scale, 0, 0, Math.PI * 2);
+      drawCtx.fill();
+    }
+
     drawCtx.save();
+
+    if (anim.shadowGroundY !== undefined) {
+      const feetY = py + h - 2 * sy;
+      const elevation = Math.max(0, anim.shadowGroundY - feetY);
+      const t = Math.min(1, elevation / 110);
+      const scale = 1 - t * 0.45;
+      const alpha = 0.2 * (1 - t * 0.5);
+      paintShadow(px + w / 2, anim.shadowGroundY, scale, alpha);
+    }
+
     drawCtx.translate(px, py);
 
-    // Ground shadow
-    drawCtx.fillStyle = "rgba(0, 0, 0, 0.2)";
-    drawCtx.beginPath();
-    drawCtx.ellipse((w / 2), h - 2 * sy, (w / 2.2), 5 * sy, 0, 0, Math.PI * 2);
-    drawCtx.fill();
+    if (anim.shadowGroundY === undefined) {
+      paintShadow(w / 2, h - 2 * sy, 1, 0.2);
+    }
 
     // Tail (behind body)
     const tailGrad = drawCtx.createLinearGradient(5 * sx, 16 * sy, -10 * sx, 25 * sy);
@@ -773,7 +802,31 @@
       moving,
       airborne,
       vy,
+      shadowGroundY: groundY - 2,
     });
+  }
+
+  function lerpRenderValue(entity, prevPositions, alpha) {
+    const prev = prevPositions.get(entity);
+    if (prev === undefined) return entity.x;
+    return prev + (entity.x - prev) * alpha;
+  }
+
+  function simulationStep() {
+    updatePlayer();
+    updateObstacles(STEP_MS);
+    updateBones(STEP_MS);
+    checkCollisions();
+    checkBoneCollisions();
+    updateScorePopups(STEP_MS);
+    parallaxOffset += SCROLL_SPEED * 0.3;
+
+    elapsedMs += STEP_MS;
+    const newScore = Math.floor(elapsedMs / 1000);
+    if (newScore !== scoreSeconds) {
+      scoreSeconds = newScore;
+      updateDifficulty();
+    }
   }
 
   let lastFrameTime = 0;
@@ -781,38 +834,57 @@
   function gameLoop(timestamp) {
     if (!running) return;
 
+    if (!lastFrameTime) lastFrameTime = timestamp;
+    let frameDt = timestamp - lastFrameTime;
+    lastFrameTime = timestamp;
+    frameDt = Math.min(frameDt, MAX_FRAME_MS);
+
+    const prevPositions = new Map();
+    let renderAlpha = 0;
+    let renderParallax = parallaxOffset;
+    let renderPlayerX = player.x;
+    let renderPlayerY = player.y;
+
     if (!paused) {
-      const dt = lastFrameTime ? timestamp - lastFrameTime : 16;
-      lastFrameTime = timestamp;
-      animTime += dt;
+      obstacles.forEach((obs) => prevPositions.set(obs, obs.x));
+      bones.forEach((bone) => prevPositions.set(bone, bone.x));
+      const prevParallax = parallaxOffset;
+      const prevPlayerX = player.x;
+      const prevPlayerY = player.y;
 
-      updatePlayer();
-      updateObstacles(dt);
-      updateBones(dt);
-      checkCollisions();
-      checkBoneCollisions();
-      updateScorePopups(dt);
-      updateFlash();
+      simAccumulator += frameDt;
+      animTime += frameDt;
 
-      elapsedMs += dt;
-      const newScore = Math.floor(elapsedMs / 1000);
-      if (newScore !== scoreSeconds) {
-        scoreSeconds = newScore;
-        updateDifficulty();
+      let steps = 0;
+      while (simAccumulator >= STEP_MS && steps < MAX_SIM_STEPS) {
+        simulationStep();
+        simAccumulator -= STEP_MS;
+        steps += 1;
       }
+
+      renderAlpha = simAccumulator / STEP_MS;
+      renderParallax = prevParallax + (parallaxOffset - prevParallax) * renderAlpha;
+      renderPlayerX = prevPlayerX + (player.x - prevPlayerX) * renderAlpha;
+      renderPlayerY = prevPlayerY + (player.y - prevPlayerY) * renderAlpha;
+
+      updateFlash();
       updateHud();
     }
 
     beginFrame();
-    drawBackground();
-    for (const obs of obstacles) drawObstacle(obs);
-    for (const bone of bones) World.drawBone(ctx, bone, animTime);
+    drawBackground(renderParallax);
+    for (const obs of obstacles) {
+      drawObstacle(obs, lerpRenderValue(obs, prevPositions, renderAlpha));
+    }
+    for (const bone of bones) {
+      World.drawBone(ctx, { ...bone, x: lerpRenderValue(bone, prevPositions, renderAlpha) }, animTime);
+    }
 
     const moving = Math.abs(player.vx) > 0.5;
     const invincible = Date.now() < invincibleUntil;
     const flickerVisible = !invincible || Math.floor(Date.now() / 100) % 2 === 0;
     if (flickerVisible) {
-      drawDog(player.x, player.y, selectedChar, moving, player.vy);
+      drawDog(renderPlayerX, renderPlayerY, selectedChar, moving, player.vy);
     }
 
     for (const popup of scorePopups) World.drawScorePopup(ctx, popup);
