@@ -12,6 +12,17 @@ Run through the neighborhood, jump over obstacles, and survive as long as you ca
 
 Pushes to `main` deploy automatically via GitHub Actions.
 
+### First-time setup (repo admin)
+
+1. **GitHub Pages** — In **Settings → Pages**, set **Source** to **GitHub Actions**.  
+   Free GitHub Pages requires a **public** repository (this repo is currently private).
+2. **Push workflow** — If push is rejected for missing `workflow` scope, run:
+   ```bash
+   gh auth refresh -h github.com -s workflow
+   git push origin main
+   ```
+3. After the first successful deploy, the game is live at the URL below.
+
 ### Custom domain
 
 To use your own domain (e.g. `play.yourdomain.com`):
