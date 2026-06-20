@@ -540,12 +540,39 @@
     c.restore();
   }
 
-  function drawDetailedHouse(c, hx, hy, hw, hh, wallColor, roofColor, seed) {
+  function drawDetailedHouse(c, hx, hy, hw, hh, wallColor, roofColor, trimColor, seed) {
     c.save();
-    c.globalAlpha = 0.72;
 
     c.fillStyle = wallColor;
     c.fillRect(hx, hy, hw, hh);
+
+    const peakX = hx + hw / 2;
+    const peakY = hy - hh * 0.42;
+    const roofLeftX = hx - 8;
+    const roofRightX = hx + hw + 8;
+
+    function roofLineY(x) {
+      if (x <= peakX) {
+        const t = (x - roofLeftX) / (peakX - roofLeftX);
+        return hy + t * (peakY - hy);
+      }
+      const t = (x - peakX) / (roofRightX - peakX);
+      return peakY + t * (hy - peakY);
+    }
+
+    function drawChimney(centerX, chW, chH) {
+      const roofY = roofLineY(centerX);
+      const overlap = Math.max(3, hh * 0.025);
+      c.fillStyle = trimColor;
+      c.fillRect(centerX - chW / 2, roofY - chH, chW, chH + overlap);
+    }
+
+    if (seed % 3 !== 0) {
+      drawChimney(hx + hw * 0.72, hw * 0.1, hh * 0.14);
+    }
+    if (seed % 2 === 0) {
+      drawChimney(hx + hw * 0.26, hw * 0.08, hh * 0.12);
+    }
 
     c.fillStyle = roofColor;
     c.beginPath();
@@ -555,47 +582,40 @@
     c.closePath();
     c.fill();
 
-    if (seed % 3 !== 0) {
-      c.fillStyle = "rgba(80, 70, 65, 0.55)";
-      c.fillRect(hx + hw * 0.68, hy - hh * 0.38, hw * 0.1, hh * 0.22);
-    }
-
+    const doorTop = hy + hh * 0.56;
+    const doorLeft = hx + hw * 0.38;
+    const doorW = hw * 0.24;
     const winW = hw * 0.14;
-    const winH = hh * 0.16;
-    const winY = hy + hh * 0.22;
-    c.fillStyle = "rgba(255, 248, 220, 0.55)";
-    c.fillRect(hx + hw * 0.18, winY, winW, winH);
-    c.fillRect(hx + hw * 0.62, winY, winW, winH);
-    if (hh > 52) {
-      c.fillRect(hx + hw * 0.4, winY + hh * 0.22, winW, winH);
-    }
-    c.strokeStyle = "rgba(60, 55, 50, 0.35)";
-    c.lineWidth = 0.8;
-    for (const wx of [0.18, 0.62, 0.4]) {
-      const px = hx + hw * wx;
-      const py = wx === 0.4 ? winY + hh * 0.22 : winY;
-      if (wx === 0.4 && hh <= 52) continue;
+    const winH = hh * 0.14;
+    const rowGap = hh * 0.10;
+    const row1Y = hy + hh * 0.14;
+
+    function drawWindow(wx, wy) {
+      c.fillStyle = trimColor;
+      c.fillRect(wx, wy, winW, winH);
+      c.strokeStyle = roofColor;
+      c.lineWidth = 0.8;
       c.beginPath();
-      c.moveTo(px + winW / 2, py);
-      c.lineTo(px + winW / 2, py + winH);
-      c.moveTo(px, py + winH / 2);
-      c.lineTo(px + winW, py + winH / 2);
+      c.moveTo(wx + winW / 2, wy);
+      c.lineTo(wx + winW / 2, wy + winH);
+      c.moveTo(wx, wy + winH / 2);
+      c.lineTo(wx + winW, wy + winH / 2);
       c.stroke();
     }
 
-    c.fillStyle = "rgba(70, 55, 45, 0.6)";
-    c.fillRect(hx + hw * 0.38, hy + hh * 0.58, hw * 0.24, hh * 0.42);
-    c.fillStyle = "rgba(255, 248, 220, 0.35)";
-    c.beginPath();
-    c.arc(hx + hw * 0.5, hy + hh * 0.72, hw * 0.05, 0, Math.PI * 2);
-    c.fill();
+    drawWindow(hx + hw * 0.16, row1Y);
+    drawWindow(hx + hw * 0.7, row1Y);
 
-    if (seed % 2 === 0) {
-      c.fillStyle = "rgba(90, 80, 75, 0.5)";
-      c.fillRect(hx + hw * 0.12, hy - hh * 0.08, hw * 0.08, hh * 0.12);
+    const row2Y = row1Y + winH + rowGap;
+    if (row2Y + winH <= doorTop - hh * 0.03) {
+      drawWindow(hx + hw * 0.16, row2Y);
+      drawWindow(hx + hw * 0.7, row2Y);
     }
 
-    c.strokeStyle = "rgba(100, 90, 80, 0.3)";
+    c.fillStyle = roofColor;
+    c.fillRect(doorLeft, doorTop, doorW, hy + hh - doorTop);
+
+    c.strokeStyle = trimColor;
     c.lineWidth = 1;
     c.beginPath();
     c.moveTo(hx - 4, hy + hh);
@@ -615,7 +635,7 @@
     c.fillStyle = "#6b5344";
     c.fillRect(tx - trunkW / 2 + 1, baseY - trunkH, trunkW * 0.35, trunkH);
 
-    c.globalAlpha = 0.88;
+    c.globalAlpha = 1.0;
     const foliageY = baseY - trunkH - 8 * scale;
 
     if (seed % 4 === 0) {
@@ -659,7 +679,7 @@
       }
     }
 
-    c.globalAlpha = 0.35;
+    c.globalAlpha = 0.50;
     c.fillStyle = "#86efac";
     c.beginPath();
     c.arc(tx - 4 * scale, foliageY - 14 * scale, 5 * scale, 0, Math.PI * 2);
@@ -724,19 +744,28 @@
       drawCloud(c, cx, 42 + (i % 2) * 20, 0.9, 0.7);
     }
 
-    // Simple distant silhouettes only
-    const houseSpacing = 260;
+    // Distant houses — fixed slots prevent wrap overlap
+    const HOUSE_ROOF_PAD = 8;
+    const HOUSE_MAX_W = 88;
+    const HOUSE_GAP = 56;
+    const housePeriod = HOUSE_MAX_W + HOUSE_ROOF_PAD * 2 + HOUSE_GAP;
+    const houseScroll = parallaxOffset * 0.35;
     const houseColors = [
-      ["rgba(180, 170, 155, 0.55)", "rgba(120, 110, 100, 0.5)"],
-      ["rgba(200, 190, 210, 0.5)", "rgba(130, 120, 145, 0.45)"],
-      ["rgba(190, 200, 215, 0.5)", "rgba(110, 125, 145, 0.45)"],
+      { wall: "#c4b8ab", roof: "#8a7e72", trim: "#6e645a" },
+      { wall: "#ddd0d8", roof: "#968a9a", trim: "#756a78" },
+      { wall: "#d0d8e0", roof: "#8a95a8", trim: "#687888" },
     ];
-    for (let i = -1; i < 5; i++) {
-      const hx = ((i * houseSpacing - parallaxOffset * 0.35) % (W + houseSpacing) + W + houseSpacing) % (W + houseSpacing) - 50;
-      const hw = 72 + (i % 2) * 16;
-      const hh = 48 + (i % 3) * 6;
-      const colors = houseColors[Math.abs(i) % houseColors.length];
-      drawDetailedHouse(c, hx, groundY - hh - 22, hw, hh, colors[0], colors[1], i);
+    const firstHouseSlot = Math.floor(houseScroll / housePeriod) - 1;
+    const houseCount = Math.ceil(W / housePeriod) + 2;
+    for (let n = 0; n < houseCount; n++) {
+      const slot = firstHouseSlot + n;
+      const hx = slot * housePeriod - houseScroll;
+      const hw = 72 + (Math.abs(slot) % 2) * 16;
+      const hh = 48 + (Math.abs(slot) % 3) * 6;
+      const hy = groundY - hh - 22;
+      if (hx + hw + HOUSE_ROOF_PAD < -20 || hx - HOUSE_ROOF_PAD > W + 20) continue;
+      const palette = houseColors[Math.abs(slot) % houseColors.length];
+      drawDetailedHouse(c, hx, hy, hw, hh, palette.wall, palette.roof, palette.trim, slot);
     }
 
     // Trees with varied shapes
