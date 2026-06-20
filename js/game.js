@@ -74,6 +74,7 @@
         collar: "#1e3a8a",
         tag: "#c0ccd6",
         grayFace: false,
+        mouthSpot: null,
         pawWhite: false,
       },
     },
@@ -94,13 +95,14 @@
         tanLight: "#E8D4B8",
         muzzle: "#C4B5A3",
         muzzleGray: "#B8A896",
+        mouthSpot: "#B8A896",
         belly: "#B8A896",
         ear: "#3A1C04",
         nose: "#111111",
         eye: "#2a1808",
         collar: "#1e3a8a",
         tag: "#c0ccd6",
-        grayFace: true,
+        grayFace: false,
         pawWhite: true,
       },
     },
@@ -631,7 +633,7 @@
     drawCtx.roundRect(15 * sx, (h - 9 * sy), w - 35 * sx, 3 * sy, 1);
     drawCtx.fill();
 
-    if (tan && !ap.grayFace) {
+    if (tan && !ap.mouthSpot) {
       drawCtx.fillStyle = tan;
       drawCtx.beginPath();
       drawCtx.roundRect(15 * sx, (h - 9 * sy), w - 35 * sx, 3 * sy, 1);
@@ -684,34 +686,23 @@
     drawCtx.arc(w - 5 * sx, 10 * sy, 9 * sx, 0, Math.PI * 2);
     drawCtx.fill();
 
-    // Charlie: senior gray face
-    if (ap.grayFace) {
-      drawCtx.fillStyle = ap.muzzleGray;
-      drawCtx.beginPath();
-      drawCtx.ellipse(w - 2 * sx, 11 * sy, 7 * sx, 8 * sy, 0.05, 0, Math.PI * 2);
-      drawCtx.fill();
-      drawCtx.fillStyle = ap.muzzle;
-      drawCtx.beginPath();
-      drawCtx.ellipse(w + 1 * sx, 12 * sy, 4.5 * sx, 4 * sy, 0.1, 0, Math.PI * 2);
-      drawCtx.fill();
-    }
-
     // Tucker: tan eyebrow spot
-    if (tan && !ap.grayFace) {
+    if (tan && !ap.mouthSpot) {
       drawCtx.fillStyle = tan;
       drawCtx.beginPath();
       drawCtx.arc(w - 5 * sx, 5 * sy, 1.5 * sx, 0, Math.PI * 2);
       drawCtx.fill();
     }
 
-    // Snout
-    drawCtx.fillStyle = ap.grayFace ? ap.muzzle : tan;
+    // Snout (cream for Charlie, tan for Tucker)
+    drawCtx.fillStyle = ap.mouthSpot ? ap.muzzle : tan;
     drawCtx.beginPath();
     drawCtx.ellipse(w + 3 * sx, 11 * sy, 4 * sx, 3 * sy, 0.1, 0, Math.PI * 2);
     drawCtx.fill();
-    drawCtx.fillStyle = ap.grayFace ? "rgba(74, 35, 6, 0.12)" : ap.bodyShade;
+    // Subtle snout-top shading (kept on snout, not the head)
+    drawCtx.fillStyle = ap.mouthSpot ? "rgba(74, 35, 6, 0.12)" : "rgba(0, 0, 0, 0.14)";
     drawCtx.beginPath();
-    drawCtx.ellipse(w + 1 * sx, 9 * sy, 3 * sx, 1.5 * sy, 0.1, 0, Math.PI * 2);
+    drawCtx.ellipse(w + 3 * sx, 10 * sy, 2.5 * sx, 1.2 * sy, 0.1, 0, Math.PI * 2);
     drawCtx.fill();
 
     // Eye (on face, forward of ear)
@@ -733,6 +724,14 @@
     drawCtx.beginPath();
     drawCtx.arc(w + 5.5 * sx, 9.3 * sy, 0.5 * sx, 0, Math.PI * 2);
     drawCtx.fill();
+
+    // Charlie: small light-brown spot near mouth
+    if (ap.mouthSpot) {
+      drawCtx.fillStyle = ap.mouthSpot;
+      drawCtx.beginPath();
+      drawCtx.ellipse(w + 4 * sx, 12.5 * sy, 1.8 * sx, 1.3 * sy, 0.15, 0, Math.PI * 2);
+      drawCtx.fill();
+    }
 
     // Front legs (in front of body)
     drawLeg(38 * sx, Math.PI);

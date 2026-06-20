@@ -456,9 +456,97 @@
     c.restore();
   }
 
-  function drawSimpleSilhouette(c, hx, hy, hw, hh, wallColor, roofColor) {
+  function drawBird(c, x, y, scale, wingPhase, alpha) {
+    c.save();
+    c.globalAlpha = alpha;
+    c.strokeStyle = "#4a5568";
+    c.lineWidth = 1.2 * scale;
+    c.lineCap = "round";
+    const flap = Math.sin(wingPhase) * 3 * scale;
+    c.beginPath();
+    c.moveTo(x - 5 * scale, y + flap);
+    c.quadraticCurveTo(x - 1 * scale, y - 2 * scale - Math.abs(flap) * 0.3, x, y);
+    c.quadraticCurveTo(x + 1 * scale, y - 2 * scale - Math.abs(flap) * 0.3, x + 5 * scale, y + flap);
+    c.stroke();
+    c.restore();
+  }
+
+  function drawBirdFlock(c, originX, originY, count, seed, animTime, alpha) {
+    for (let b = 0; b < count; b++) {
+      const bx = originX + b * 14 + (seed % 3) * 4;
+      const by = originY + Math.sin(b * 1.4 + seed) * 6 + Math.sin(animTime * 0.002 + b + seed) * 4;
+      const wingPhase = animTime * 0.012 + b * 0.8 + seed;
+      drawBird(c, bx, by, 0.55 + (b % 2) * 0.1, wingPhase, alpha);
+    }
+  }
+
+  const hotAirBalloonImg = new Image();
+  let hotAirBalloonReady = false;
+  hotAirBalloonImg.onload = () => {
+    hotAirBalloonReady = true;
+  };
+  hotAirBalloonImg.src = "assets/hot-air-balloon.png";
+
+  function drawHotAirBalloon(c, x, y, scale, alpha) {
+    if (!hotAirBalloonReady) return;
+    c.save();
+    c.globalAlpha = alpha;
+    const bob = Math.sin(x * 0.02 + y * 0.01) * 3 * scale;
+    const drawW = 72 * scale;
+    const drawH = drawW * (hotAirBalloonImg.height / hotAirBalloonImg.width);
+    c.drawImage(hotAirBalloonImg, x - drawW / 2, y + bob, drawW, drawH);
+    c.restore();
+  }
+
+  function drawAirplane(c, x, y, scale, alpha) {
+    c.save();
+    c.globalAlpha = alpha;
+    c.fillStyle = "#94a3b8";
+
+    c.beginPath();
+    c.ellipse(x, y, 12 * scale, 3 * scale, 0, 0, Math.PI * 2);
+    c.fill();
+
+    c.beginPath();
+    c.moveTo(x - 2 * scale, y);
+    c.lineTo(x - 8 * scale, y - 9 * scale);
+    c.lineTo(x + 2 * scale, y - 2 * scale);
+    c.closePath();
+    c.fill();
+
+    c.beginPath();
+    c.moveTo(x + 4 * scale, y + 1 * scale);
+    c.lineTo(x + 10 * scale, y + 7 * scale);
+    c.lineTo(x + 2 * scale, y + 2 * scale);
+    c.closePath();
+    c.fill();
+
+    c.fillStyle = "#cbd5e1";
+    c.beginPath();
+    c.moveTo(x + 10 * scale, y);
+    c.lineTo(x + 14 * scale, y - 1 * scale);
+    c.lineTo(x + 10 * scale, y - 2 * scale);
+    c.closePath();
+    c.fill();
+
+    c.strokeStyle = "rgba(255,255,255,0.35)";
+    c.lineWidth = 1;
+    c.setLineDash([4, 6]);
+    c.beginPath();
+    c.moveTo(x - 30 * scale, y - 1 * scale);
+    c.lineTo(x - 8 * scale, y);
+    c.stroke();
+    c.setLineDash([]);
+    c.restore();
+  }
+
+  function drawDetailedHouse(c, hx, hy, hw, hh, wallColor, roofColor, seed) {
+    c.save();
+    c.globalAlpha = 0.72;
+
     c.fillStyle = wallColor;
     c.fillRect(hx, hy, hw, hh);
+
     c.fillStyle = roofColor;
     c.beginPath();
     c.moveTo(hx - 8, hy);
@@ -466,18 +554,118 @@
     c.lineTo(hx + hw + 8, hy);
     c.closePath();
     c.fill();
+
+    if (seed % 3 !== 0) {
+      c.fillStyle = "rgba(80, 70, 65, 0.55)";
+      c.fillRect(hx + hw * 0.68, hy - hh * 0.38, hw * 0.1, hh * 0.22);
+    }
+
+    const winW = hw * 0.14;
+    const winH = hh * 0.16;
+    const winY = hy + hh * 0.22;
+    c.fillStyle = "rgba(255, 248, 220, 0.55)";
+    c.fillRect(hx + hw * 0.18, winY, winW, winH);
+    c.fillRect(hx + hw * 0.62, winY, winW, winH);
+    if (hh > 52) {
+      c.fillRect(hx + hw * 0.4, winY + hh * 0.22, winW, winH);
+    }
+    c.strokeStyle = "rgba(60, 55, 50, 0.35)";
+    c.lineWidth = 0.8;
+    for (const wx of [0.18, 0.62, 0.4]) {
+      const px = hx + hw * wx;
+      const py = wx === 0.4 ? winY + hh * 0.22 : winY;
+      if (wx === 0.4 && hh <= 52) continue;
+      c.beginPath();
+      c.moveTo(px + winW / 2, py);
+      c.lineTo(px + winW / 2, py + winH);
+      c.moveTo(px, py + winH / 2);
+      c.lineTo(px + winW, py + winH / 2);
+      c.stroke();
+    }
+
+    c.fillStyle = "rgba(70, 55, 45, 0.6)";
+    c.fillRect(hx + hw * 0.38, hy + hh * 0.58, hw * 0.24, hh * 0.42);
+    c.fillStyle = "rgba(255, 248, 220, 0.35)";
+    c.beginPath();
+    c.arc(hx + hw * 0.5, hy + hh * 0.72, hw * 0.05, 0, Math.PI * 2);
+    c.fill();
+
+    if (seed % 2 === 0) {
+      c.fillStyle = "rgba(90, 80, 75, 0.5)";
+      c.fillRect(hx + hw * 0.12, hy - hh * 0.08, hw * 0.08, hh * 0.12);
+    }
+
+    c.strokeStyle = "rgba(100, 90, 80, 0.3)";
+    c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(hx - 4, hy + hh);
+    c.lineTo(hx + hw + 4, hy + hh);
+    c.stroke();
+
+    c.restore();
   }
 
-  function drawSimpleTree(c, tx, baseY, scale) {
+  function drawDetailedTree(c, tx, baseY, scale, seed) {
+    c.save();
     const trunkH = 28 * scale;
+    const trunkW = 7 * scale;
+
+    c.fillStyle = "#5c4636";
+    c.fillRect(tx - trunkW / 2, baseY - trunkH, trunkW, trunkH);
     c.fillStyle = "#6b5344";
-    c.fillRect(tx - 4 * scale, baseY - trunkH, 8 * scale, trunkH);
-    c.fillStyle = "#4ade80";
-    c.globalAlpha = 0.85;
+    c.fillRect(tx - trunkW / 2 + 1, baseY - trunkH, trunkW * 0.35, trunkH);
+
+    c.globalAlpha = 0.88;
+    const foliageY = baseY - trunkH - 8 * scale;
+
+    if (seed % 4 === 0) {
+      c.fillStyle = "#2d6a3e";
+      c.beginPath();
+      c.moveTo(tx, foliageY - 28 * scale);
+      c.lineTo(tx - 16 * scale, foliageY + 6 * scale);
+      c.lineTo(tx + 16 * scale, foliageY + 6 * scale);
+      c.closePath();
+      c.fill();
+      c.fillStyle = "#3d8a52";
+      c.beginPath();
+      c.moveTo(tx, foliageY - 20 * scale);
+      c.lineTo(tx - 12 * scale, foliageY + 2 * scale);
+      c.lineTo(tx + 12 * scale, foliageY + 2 * scale);
+      c.closePath();
+      c.fill();
+    } else {
+      const blobs = [
+        { dx: 0, dy: -10, r: 18 },
+        { dx: -10, dy: 2, r: 13 },
+        { dx: 10, dy: 0, r: 14 },
+      ];
+      for (let i = 0; i < blobs.length; i++) {
+        const b = blobs[i];
+        const g = c.createRadialGradient(
+          tx + b.dx * scale - 3 * scale,
+          foliageY + b.dy * scale - 3 * scale,
+          1,
+          tx + b.dx * scale,
+          foliageY + b.dy * scale,
+          b.r * scale
+        );
+        g.addColorStop(0, i === 0 ? "#5ecf7a" : "#4ade80");
+        g.addColorStop(0.65, "#2f9e4f");
+        g.addColorStop(1, "#1e6b38");
+        c.fillStyle = g;
+        c.beginPath();
+        c.arc(tx + b.dx * scale, foliageY + b.dy * scale, b.r * scale, 0, Math.PI * 2);
+        c.fill();
+      }
+    }
+
+    c.globalAlpha = 0.35;
+    c.fillStyle = "#86efac";
     c.beginPath();
-    c.arc(tx, baseY - trunkH - 10 * scale, 18 * scale, 0, Math.PI * 2);
+    c.arc(tx - 4 * scale, foliageY - 14 * scale, 5 * scale, 0, Math.PI * 2);
     c.fill();
-    c.globalAlpha = 1;
+
+    c.restore();
   }
 
   function drawBackground(c, W, H, groundY, parallaxOffset, animTime) {
@@ -512,6 +700,23 @@
     c.closePath();
     c.fill();
 
+    // Distant sky ambience — slow, soft, non-distracting
+    const planeX = ((animTime * 0.018 + parallaxOffset * 0.04) % (W + 280)) - 60;
+    drawAirplane(c, planeX, H * 0.09, 0.55, 0.32);
+
+    const balloonX = ((parallaxOffset * 0.06 + 340) % (W + 520)) - 80;
+    drawHotAirBalloon(c, balloonX, H * 0.16, 0.65, 0.38);
+    if (balloonX > W * 0.55) {
+      drawHotAirBalloon(c, balloonX - W * 0.72, H * 0.2, 0.5, 0.28);
+    }
+
+    const flockSpacing = 380;
+    for (let i = 0; i < 5; i++) {
+      const flockX = ((i * flockSpacing + 60 - parallaxOffset * (0.06 + (i % 3) * 0.02) + animTime * 0.025) % (W + flockSpacing) + W + flockSpacing) % (W + flockSpacing) - 40;
+      const flockY = 48 + (i % 3) * 22 + Math.sin(animTime * 0.0015 + i * 2) * 6;
+      drawBirdFlock(c, flockX, flockY, 2 + (i % 3), i * 7 + 3, animTime, 0.38 + (i % 2) * 0.08);
+    }
+
     // One cloud layer, fewer clouds
     const cloudSpacing = 320;
     for (let i = -1; i < 4; i++) {
@@ -531,14 +736,14 @@
       const hw = 72 + (i % 2) * 16;
       const hh = 48 + (i % 3) * 6;
       const colors = houseColors[Math.abs(i) % houseColors.length];
-      drawSimpleSilhouette(c, hx, groundY - hh - 22, hw, hh, colors[0], colors[1]);
+      drawDetailedHouse(c, hx, groundY - hh - 22, hw, hh, colors[0], colors[1], i);
     }
 
-    // Sparse trees
-    const treeSpacing = 220;
-    for (let i = 0; i < 3; i++) {
-      const tx = ((i * treeSpacing + 80 - parallaxOffset * 0.4) % (W + treeSpacing) + W + treeSpacing) % (W + treeSpacing);
-      drawSimpleTree(c, tx, groundY - 12, 0.9 + (i % 2) * 0.15);
+    // Trees with varied shapes
+    const treeSpacing = 200;
+    for (let i = 0; i < 5; i++) {
+      const tx = ((i * treeSpacing + 60 - parallaxOffset * 0.4) % (W + treeSpacing) + W + treeSpacing) % (W + treeSpacing);
+      drawDetailedTree(c, tx, groundY - 12, 0.85 + (i % 3) * 0.12, i + 2);
     }
 
     // Ground: curb, sidewalk, clean lawn
